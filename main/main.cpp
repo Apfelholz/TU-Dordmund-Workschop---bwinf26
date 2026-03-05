@@ -143,10 +143,14 @@ void map_task(void* pvParameters) {
         draw_motor();
 
         // Draw obstacles as dots
-        for (const auto& b : barriers)
-            display.fillCircle(b.x * MAP_TO_DISPLAY_SCALE, b.y * MAP_TO_DISPLAY_SCALE,
-                               OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
-
+        for (const auto& b : barriers){
+            int bx = b.x * MAP_TO_DISPLAY_SCALE;
+            int by = b.y * MAP_TO_DISPLAY_SCALE;
+            if(bx > cx-50 && bx < cx+50 && by > cy-50 && by < cy+50){
+                display.fillCircle(b.x * MAP_TO_DISPLAY_SCALE, b.y * MAP_TO_DISPLAY_SCALE,
+                                OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
+            }
+        }
         // E-paper needs occasional full refresh to avoid ghosting
         if (partial_refresh_counter < PARTIAL_REFRESH_LIMIT) {
             display.display(true);

@@ -45,10 +45,17 @@ struct barrier {
 };
 std::vector<barrier> barriers;  // obstacle ring buffer
 
-void set_car_position(int x, int y, int angle) {
-    car_x = x;
-    car_y = y;
+void set_car_angle(int angle) {
     car_angle = angle + 180;
+}
+
+void transform_map(int x, int y, int angle) {
+    car_x = x - car_x;
+    car_y = y - car_y;
+    for (const auto& b : barriers){
+        b.x = b.x - car_x;
+        b.y = b.y - car_y;
+    }
 }
 
 // Oldest point is dropped when buffer is full
@@ -130,19 +137,19 @@ void map_task(void* pvParameters) {
 
         // Draw car as a triangle pointing in car_angle direction
         double rad = car_angle * M_PI / 180.0;
-        int cx = car_x * MAP_TO_DISPLAY_SCALE;
-        int cy = car_y * MAP_TO_DISPLAY_SCALE;
-        int x0 = cx + CAR_TRIANGLE_SIZE * cos(rad);
-        int y0 = cy - CAR_TRIANGLE_SIZE * sin(rad);
-        int x1 = cx - CAR_TRIANGLE_SIZE * (cos(rad) + sin(rad));
-        int y1 = cy + CAR_TRIANGLE_SIZE * (sin(rad) + cos(rad));
-        int x2 = cx - CAR_TRIANGLE_SIZE * (cos(rad) - sin(rad));
-        int y2 = cy + CAR_TRIANGLE_SIZE * (sin(rad) - cos(rad));
+        int x0 = 50 + CAR_TRIANGLE_SIZE * cos(rad);
+        int y0 = 50 - CAR_TRIANGLE_SIZE * sin(rad);
+        int x1 = 50 - CAR_TRIANGLE_SIZE * (cos(rad) + sin(rad));
+        int y1 = 50 + CAR_TRIANGLE_SIZE * (sin(rad) + cos(rad));
+        int x2 = 50 - CAR_TRIANGLE_SIZE * (cos(rad) - sin(rad));
+        int y2 = 50 + CAR_TRIANGLE_SIZE * (sin(rad) - cos(rad));
         display.fillTriangle(x0, y0, x1, y1, x2, y2, GxEPD_BLACK);
 
         draw_motor();
 
         // Draw obstacles as dots
+        int cx = car_x * MAP_TO_DISPLAY_SCALE;
+        int cy = car_y * MAP_TO_DISPLAY_SCALE;
         for (const auto& b : barriers){
             int bx = b.x * MAP_TO_DISPLAY_SCALE;
             int by = b.y * MAP_TO_DISPLAY_SCALE;

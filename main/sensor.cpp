@@ -44,15 +44,11 @@ void sensor_task(void* pvParameters) {
         double pos_x = offset_pos_y + sensor_data_buffer.pos_Y * -1.0 * imu_scaling_factor;
         double angle_z = offset_angle_z - sensor_data_buffer.ang_Z;
 
-        // Clamp to map bounds
-        if (pos_x < 0) pos_x = 0;
-        if (pos_x > 100) pos_x = 100;
-        if (pos_y < 0) pos_y = 0;
-        if (pos_y > 100) pos_y = 100;
-
         sensor_data_buffer.lidar_distance *= lidar_scaling_factor;
 
-        set_car_position(pos_x, pos_y, angle_z);
+        set_car_angle(angle_z);
+
+        transform_map(pos_x, pos_y);
 
         // Add obstacle if close enough
         if (sensor_data_buffer.lidar_distance < OBSTACLE_DISTANCE_THRESHOLD) {

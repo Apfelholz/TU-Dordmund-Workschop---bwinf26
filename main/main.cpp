@@ -30,7 +30,7 @@ GxEPD2_BW<WatchyDisplay, WatchyDisplay::HEIGHT> display(
 
 BMA423 sensor;  // accelerometer (configured in helper.h)
 
-uint8_t rover_mac[] = CAR2_MAC;  // MAC of the car this watch controls
+uint8_t rover_mac[] = CAR1_MAC;  // MAC of the car this watch controls
 
 SemaphoreHandle_t xSemaphoreCarUpdate;
 SemaphoreHandle_t xSemaphoreMotorControl;
@@ -206,6 +206,7 @@ void accel_task(void* pvParameters) {
                 direction = y / ACCEL_FULL_TILT * MAX_ANGLE;
 
             struct drive_data data = {INTERFACE_MAGIC, speed, direction};
+            handleQueueInput(data);
             ESP_ERROR_CHECK(esp_now_send(rover_mac, (uint8_t*)&data, sizeof(data)));
         }
 
@@ -271,3 +272,34 @@ extern "C" void app_main() {
     ESP_LOGE("app_main", "insufficient RAM");
     abort();
 }
+
+QueueHandle_t queue;
+
+queue = xQueueCreate(
+    100,
+    sizeof(int)
+);
+
+void handleQueueInput(&value) {
+
+    if (uxQueueMessagesWaiting(queue) < 100) {
+        xQueueSend(queue, &value, 0);
+    } else {
+        xQueueReceive(queue, NULL, 0);
+        xQueueSend(queue, &value, 0);
+    }
+}
+
+void timeTravel() {
+
+    float steeringValues[uxQueueMessagesWaiting(queue)];
+    for(int i = 0; i < uxQueueMessagesWaiting(queue); i++) {
+
+        xQueueReceive(queue, &steeringValues[i], 0);
+    }
+    for
+    
+}
+
+
+

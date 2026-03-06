@@ -25,12 +25,14 @@
 #include "nvs_flash.h"
 #include "sensor.h"
 
+extern struct sensor_data sensor_data_buffer;
+
 GxEPD2_BW<WatchyDisplay, WatchyDisplay::HEIGHT> display(
     WatchyDisplay(DISPLAY_CS, DISPLAY_DC, DISPLAY_RES, DISPLAY_BUSY));
 
 BMA423 sensor;  // accelerometer (configured in helper.h)
 
-uint8_t rover_mac[] = CAR2_MAC;  // MAC of the car this watch controls
+uint8_t rover_mac[] = CAR1_MAC;  // MAC of the car this watch controls
 
 SemaphoreHandle_t xSemaphoreCarUpdate;
 SemaphoreHandle_t xSemaphoreMotorControl;
@@ -49,9 +51,13 @@ void set_car_angle(int angle) {
     car_angle = angle + 180;
 }
 
-void transform_map(int x, int y) {
-    car_x = x;
-    car_y = y;
+void transform_map(int x, int y, int angle) {
+    car_x = x - car_x;
+    car_y = y - car_y;
+    for (auto& b : barriers){
+        b.x = b.x - car_x;
+        b.y = b.y - car_y;
+    }
 }
 
 // Oldest point is dropped when buffer is full
@@ -143,17 +149,15 @@ void map_task(void* pvParameters) {
 
         draw_motor();
 
-        // Draw obstacles as dots relative to the car (car stays centered)
-        constexpr int center_px = 50 * MAP_TO_DISPLAY_SCALE;
-        for (const auto& b : barriers) {
-            int dx = b.x - car_x;
-            int dy = b.y - car_y;
-
-            // Only draw obstacles within a 100x100 map window around the car
-            if (dx > -50 && dx < 50 && dy > -50 && dy < 50) {
-                int px = center_px + dx * MAP_TO_DISPLAY_SCALE;
-                int py = center_px + dy * MAP_TO_DISPLAY_SCALE;
-                display.fillCircle(px, py, OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
+        // Draw obstacles as dots
+        int cx = car_x * MAP_TO_DISPLAY_SCALE;
+        int cy = car_y * MAP_TO_DISPLAY_SCALE;
+        for (const auto& b : barriers){
+            int bx = b.x * MAP_TO_DISPLAY_SCALE;
+            int by = b.y * MAP_TO_DISPLAY_SCALE;
+            if(bx > cx-50 && bx < cx+50 && by > cy-50 && by < cy+50){
+                display.fillCircle(b.x * MAP_TO_DISPLAY_SCALE, b.y * MAP_TO_DISPLAY_SCALE,
+                                OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
             }
         }
         // E-paper needs occasional full refresh to avoid ghosting
@@ -168,7 +172,11 @@ void map_task(void* pvParameters) {
         vTaskDelayUntil(&lastWakeTime, MAP_REFRESH_INTERVAL_MS / portTICK_PERIOD_MS);
     }
 }
-
+float positionXBufferedAngle;
+float positionYBufferedAngle;
+float angle;
+float firstMeasure; 
+bool notSaved = true;
 // Read accelerometer tilt and send drive commands to the car
 void accel_task(void* pvParameters) {
     _bmaConfig();
@@ -180,8 +188,44 @@ void accel_task(void* pvParameters) {
         }
 
         Accel acc;
-        if (sensor.getAccel(acc)) {
-            // Tilt mapping (BMA423, 2G range, ~1000 raw = 90 degrees):
+        if (true) {
+
+            double speed = 10;
+            double direction = 0;
+            if(sensor_data_buffer.lidar_distance > 6000) {
+
+                speed = MAX_SPEED;        
+            } else {
+                speed = MAX_SPEED*0.3;
+                if(notSaved) {
+                    positionXBufferedAngle = sensor_data_buffer.pos_X;
+                    positionYBufferedAngle = sensor_data_buffer.pos_Y;
+                    angle = sensor_data_buffer.ang_Z;
+                    firstMeasure = sensor_data_buffer.lidar_distance;
+                    notSaved = false;
+                } else {
+                    notSaved = true;
+                    float angle2 = sensor_data_buffer.ang_Z;
+                    float secondMeasure = sensor_data_buffer.lidar_distance;
+                    float angleDiff = angle2 - angle;
+                    float tracedLineOnWall = pow(firstMeasure, 2) + pow(secondMeasure, 2) - 2 * firstMeasure * secondMeasure * cos(angleDiff);
+                    float angleToWall = asin((sin(angleDiff)/tracedLineOnWall) * secondMeasure);
+                    if(secondMeasure < firstMeasure) {
+                        float angleToDrive = angleDiff + 180 - (2 * angleToWall);
+                        direction = direction + angleToDrive;
+                    } else {
+                        float angleToDrive = 180 - (2 * angleToWall);
+                        direction = direction - angleToDrive;
+                    }
+                    
+                }
+            }
+
+            struct drive_data data = {INTERFACE_MAGIC, speed, direction};
+            ESP_ERROR_CHECK(esp_now_send(rover_mac, (uint8_t*)&data, sizeof(data)));
+            
+            
+            /* Tilt mapping (BMA423, 2G range, ~1000 raw = 90 degrees):
             //   -x = forward, x = backward, y = left, -y = right
             double x = acc.x * -1.0;
             double speed;
@@ -204,7 +248,8 @@ void accel_task(void* pvParameters) {
                 direction = y / ACCEL_FULL_TILT * MAX_ANGLE;
 
             struct drive_data data = {INTERFACE_MAGIC, speed, direction};
-            ESP_ERROR_CHECK(esp_now_send(rover_mac, (uint8_t*)&data, sizeof(data)));
+            handleQueueInput(data);
+            ESP_ERROR_CHECK(esp_now_send(rover_mac, (uint8_t*)&data, sizeof(data))); */
         }
 
         vTaskDelay(ACCEL_TASK_INTERVAL_MS / portTICK_PERIOD_MS);
@@ -269,3 +314,7 @@ extern "C" void app_main() {
     ESP_LOGE("app_main", "insufficient RAM");
     abort();
 }
+
+
+
+

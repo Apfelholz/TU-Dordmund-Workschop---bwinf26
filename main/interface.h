@@ -3,7 +3,7 @@
 #define INTERFACE_MAGIC 0xDEADBEEF
 
 // Maximum speed (units/s) and steering angle (degrees) for drive commands
-#define MAX_SPEED 5
+#define MAX_SPEED 10
 #define MAX_ANGLE 90
 
 // Sensor data sent from car to watch

@@ -48,7 +48,7 @@ void sensor_task(void* pvParameters) {
 
         set_car_angle(angle_z);
 
-        transform_map(pos_x, pos_y);
+        transform_map(pos_x, pos_y, angle_z);
 
         // Add obstacle if close enough
         if (sensor_data_buffer.lidar_distance < OBSTACLE_DISTANCE_THRESHOLD) {

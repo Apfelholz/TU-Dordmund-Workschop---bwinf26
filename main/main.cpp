@@ -273,15 +273,18 @@ extern "C" void app_main() {
     abort();
 }
 
-QueueHandle_t queue;
+ QueueHandle_t queue;
 
-queue = xQueueCreate(
-    100,
-    sizeof(int)
-);
+ void setUp() {
+    queue = xQueueCreate(
+        100,
+        sizeof(struct)
+    );
+ }
 
-void handleQueueInput(&value) {
+static void handleQueueInput(&value) {
 
+    
     if (uxQueueMessagesWaiting(queue) < 100) {
         xQueueSend(queue, &value, 0);
     } else {

@@ -52,7 +52,7 @@ void set_car_angle(int angle) {
 void transform_map(int x, int y, int angle) {
     car_x = x - car_x;
     car_y = y - car_y;
-    for (const auto& b : barriers){
+    for (auto& b : barriers){
         b.x = b.x - car_x;
         b.y = b.y - car_y;
     }
@@ -133,16 +133,16 @@ void map_task(void* pvParameters) {
     int partial_refresh_counter = 0;
 
     while (1) {
-        display.fillScreen(GxEPD_WHITE);
+        //display.fillScreen(GxEPD_WHITE);
 
         // Draw car as a triangle pointing in car_angle direction
         double rad = car_angle * M_PI / 180.0;
-        int x0 = 50 + CAR_TRIANGLE_SIZE * cos(rad);
-        int y0 = 50 - CAR_TRIANGLE_SIZE * sin(rad);
-        int x1 = 50 - CAR_TRIANGLE_SIZE * (cos(rad) + sin(rad));
-        int y1 = 50 + CAR_TRIANGLE_SIZE * (sin(rad) + cos(rad));
-        int x2 = 50 - CAR_TRIANGLE_SIZE * (cos(rad) - sin(rad));
-        int y2 = 50 + CAR_TRIANGLE_SIZE * (sin(rad) - cos(rad));
+        int x0 = 50*MAP_TO_DISPLAY_SCALE + CAR_TRIANGLE_SIZE * cos(rad);
+        int y0 = 50*MAP_TO_DISPLAY_SCALE - CAR_TRIANGLE_SIZE * sin(rad);
+        int x1 = 50*MAP_TO_DISPLAY_SCALE - CAR_TRIANGLE_SIZE * (cos(rad) + sin(rad));
+        int y1 = 50*MAP_TO_DISPLAY_SCALE + CAR_TRIANGLE_SIZE * (sin(rad) + cos(rad));
+        int x2 = 50*MAP_TO_DISPLAY_SCALE - CAR_TRIANGLE_SIZE * (cos(rad) - sin(rad));
+        int y2 = 50*MAP_TO_DISPLAY_SCALE + CAR_TRIANGLE_SIZE * (sin(rad) - cos(rad));
         display.fillTriangle(x0, y0, x1, y1, x2, y2, GxEPD_BLACK);
 
         draw_motor();

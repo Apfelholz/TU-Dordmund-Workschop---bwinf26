@@ -10,3 +10,5 @@ void get_sensor_data_from_isr(struct sensor_data* data);
 // Defined in main.cpp
 void set_car_position(int x, int y, int angle);
 void add_barrier(int x, int y, int angle);
+void set_car_angle(int angle);
+void transform_map(int pos1, int pos2);

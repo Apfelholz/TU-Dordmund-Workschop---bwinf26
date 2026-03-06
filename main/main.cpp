@@ -49,13 +49,9 @@ void set_car_angle(int angle) {
     car_angle = angle + 180;
 }
 
-void transform_map(int x, int y, int angle) {
-    car_x = x - car_x;
-    car_y = y - car_y;
-    for (auto& b : barriers){
-        b.x = b.x - car_x;
-        b.y = b.y - car_y;
-    }
+void transform_map(int x, int y) {
+    car_x = x;
+    car_y = y;
 }
 
 // Oldest point is dropped when buffer is full
@@ -147,15 +143,17 @@ void map_task(void* pvParameters) {
 
         draw_motor();
 
-        // Draw obstacles as dots
-        int cx = car_x * MAP_TO_DISPLAY_SCALE;
-        int cy = car_y * MAP_TO_DISPLAY_SCALE;
-        for (const auto& b : barriers){
-            int bx = b.x * MAP_TO_DISPLAY_SCALE;
-            int by = b.y * MAP_TO_DISPLAY_SCALE;
-            if(bx > cx-50 && bx < cx+50 && by > cy-50 && by < cy+50){
-                display.fillCircle(b.x * MAP_TO_DISPLAY_SCALE, b.y * MAP_TO_DISPLAY_SCALE,
-                                OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
+        // Draw obstacles as dots relative to the car (car stays centered)
+        constexpr int center_px = 50 * MAP_TO_DISPLAY_SCALE;
+        for (const auto& b : barriers) {
+            int dx = b.x - car_x;
+            int dy = b.y - car_y;
+
+            // Only draw obstacles within a 100x100 map window around the car
+            if (dx > -50 && dx < 50 && dy > -50 && dy < 50) {
+                int px = center_px + dx * MAP_TO_DISPLAY_SCALE;
+                int py = center_px + dy * MAP_TO_DISPLAY_SCALE;
+                display.fillCircle(px, py, OBSTACLE_DOT_RADIUS, GxEPD_BLACK);
             }
         }
         // E-paper needs occasional full refresh to avoid ghosting

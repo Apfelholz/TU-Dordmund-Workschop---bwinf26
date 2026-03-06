@@ -52,7 +52,7 @@ void set_car_angle(int angle) {
 void transform_map(int x, int y, int angle) {
     car_x = x - car_x;
     car_y = y - car_y;
-    for (const auto& b : barriers){
+    for (auto& b : barriers){
         b.x = b.x - car_x;
         b.y = b.y - car_y;
     }
